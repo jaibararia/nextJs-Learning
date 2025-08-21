@@ -1,0 +1,153 @@
+=> Linking & Navigation
+
+- In Next.js, routes are rendered on the server by default. This often means the client has to wait for a server response before a new route can be shown.
+- Next.js comes with built-in prefetching, streaming, and client-side transitions ensuring navigation stays fast and responsive.
+- This guide explains how navigation works in Next.js and how you can optimize it for dynamic routes and slow networks.
+
+
+=> How navigation works
+- To understand how navigation works in Next.js, it helps to be familiar with the following concepts:
+    - Server Rendering
+    - Prefetching
+    - Streaming
+    - Client-side transitions
+
+=> Server Rendering
+
+- In Next.js, Layouts and Pages are React Server Components by default.
+- On initial and subsequent navigations, the Server Component Payload is generated on the server before being sent to the client.
+
+- There are two types of server rendering, based on when it happens:
+
+    - Static Rendering (or Prerendering): happens at build time or during revalidation and the result is cached.
+    - Dynamic Rendering happens at request time in response to a client request.
+
+- The trade-off of server rendering is that the client must wait for the server to respond before the new route can be shown.
+- Next.js addresses this delay by prefetching routes the user is likely to visit and performing client-side transitions.
+
+- Good to know: HTML is also generated for the initial visit.
+
+=> Prefetching 
+
+- Prefetching is the process of loading a route in the background before the user navigates to it.
+- This makes navigation between routes in your application feel instant, because by the time a user clicks on a link, the data to render the next route is already available client side.
+- Next.js automatically prefetches routes linked with the <Link> component when they enter the user's viewport.
+
+- How much of the route is prefetched depends on whether it's static or dynamic:
+    - Static Route: the full route is prefetched.
+    - Dynamic Route: prefetching is skipped, or the route is partially prefetched if loading.tsx is present.
+
+- By skipping or partially prefetching dynamic routes, Next.js avoids unnecessary work on the server for routes the users may never visit.
+- However, waiting for a server response before navigation can give the users the impression that the app is not responding.
+- To improve the navigation experience to dynamic routes, you can use streaming.
+
+=> Streaming
+
+- Streaming allows the server to send parts of a dynamic route to the client as soon as they're ready, rather than waiting for the entire route to be rendered. 
+- This means users see something sooner, even if parts of the page are still loading.
+
+- For dynamic routes, it means they can be partially prefetched.
+- That is, shared layouts and loading skeletons can be requested ahead of time.
+- To use streaming, create a loading.tsx in your route folder:
+
+example:
+- app
+    - layout.tsx
+    - dashboard
+        - page.tsx
+        - layout.tsx
+        - loading.tsx
+
+===== code =====
+- app / dashboard / loading.tsx
+
+export default function Loading() {
+  // Add fallback UI that will be shown while the route is loading.
+  return <LoadingSkeleton />
+}
+
+- Behind the scenes, Next.js will automatically wrap the page.tsx contents in a <Suspense> boundary.
+- The prefetched fallback UI will be shown while the route is loading, and swapped for the actual content once ready.
+- Good to know: You can also use <Suspense> to create loading UI for nested components.
+
+- Benefits of loading.tsx:
+    - Immediate navigation and visual feedback for the user.
+    - Shared layouts remain interactive and navigation is interruptible.
+    - Improved Core Web Vitals: TTFB, FCP, and TTI.
+
+- To further improve the navigation experience, Next.js performs a client-side transition with the <Link> component.
+
+
+=> Client-side transitions
+
+- Traditionally, navigation to a server-rendered page triggers a full page load. 
+
+- Next.js avoids this with client-side transitions using the <Link> component. Instead of reloading the page, it updates the content dynamically by:
+    - Keeping any shared layouts and UI.
+    - Replacing the current page with the prefetched loading state or a new page if available.
+
+=> What can make transitions slow?
+
+-> Dynamic routes without loading.tsx
+
+- When navigating to a dynamic route, the client must wait for the server response before showing the result.
+- This can give the users the impression that the app is not responding.
+
+- We recommend adding loading.tsx to dynamic routes to enable partial prefetching, trigger immediate navigation, and display a loading UI while the route renders.
+
+example:
+- app / blog / [slug] / loading.tsx
+
+export default function Loading() {
+  return <LoadingSkeleton />
+}
+
+- Good to know: In development mode, you can use the Next.js Devtools to identify if the route is static or dynamic. See devIndicators for more information.
+
+-> Dynamic segments without generateStaticParams
+
+- If a dynamic segment could be prerendered but isn't because it's missing generateStaticParams, the route will fallback to dynamic rendering at request time.
+- Ensure the route is statically generated at build time by adding generateStaticParams:
+==== code ====
+
+- app / blog / [slug] / page.tsx
+
+export async function generateStaticParams() {
+    const posts = await fetch("https://..../posts").then ((res) => res.json())
+
+    return posts.map((post) => ({
+        slug: post.slug,
+    }))
+}
+
+export default async function Page({
+    params,
+} : {
+    params: Promise<{slug : string}>
+}) {
+    const { slug } = awaits params
+    // ....
+}
+
+-> Slow networks
+
+- On slow or unstable networks, prefetching may not finish before the user clicks a link.
+- This can affect both static and dynamic routes. In these cases, the loading.js fallback may not appear immediately because it hasn't been prefetched yet.
+- To improve perceived performance, you can use the useLinkStatus hook to show inline visual feedback to the user (like spinners or text glimmers on the link) while a transition is in progress.
+
+example:
+==== code ====
+
+- app/ui/loading-indicator.tsx
+
+'use client'
+ 
+import { useLinkStatus } from 'next/link'
+ 
+export default function LoadingIndicator() {
+  const { pending } = useLinkStatus()
+  return pending ? (
+    <div role="status" aria-label="Loading" className="spinner" />
+  ) : null
+}
+
