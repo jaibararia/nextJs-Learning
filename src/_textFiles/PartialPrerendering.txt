@@ -1,0 +1,5 @@
+=> Partial Prerendering
+
+- Partial Prerendering (PPR) is a rendering strategy that allows you to combine static and dynamic content in the same route.
+- This improves the initial page performance while still supporting personalized, dynamic data.
+
