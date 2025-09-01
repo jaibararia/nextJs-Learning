@@ -3,3 +3,40 @@
 - Partial Prerendering (PPR) is a rendering strategy that allows you to combine static and dynamic content in the same route.
 - This improves the initial page performance while still supporting personalized, dynamic data.
 
+- Check out this video - https://www.youtube.com/watch?v=MTcPrTIBkpA
+
+-> Enabling Partial Prerendering
+
+- You can enable PPR by adding the ppr option to your next.config.ts file:
+
+E.g;
+
+import type { NextConfig } from 'next'
+ 
+const nextConfig: NextConfig = {
+  experimental: {
+    ppr: 'incremental',
+  },
+}
+ 
+export default nextConfig
+
+- The 'incremental' value allows you to adopt PPR for specific routes:
+
+Where you to use ppr mention
+- app/component/layout.tsx
+
+- export const experimental_ppr = true
+ 
+export default function Layout({ children }: { children: React.ReactNode }) {
+  // ...
+}
+
+- Routes that don't have experimental_ppr will default to false and will not be prerendered using PPR.
+- You need to explicitly opt-in to PPR for each route.
+
+Good to know:
+
+- "experimental_ppr" will apply to all children of the route segment, including nested layouts and pages.
+- You don't have to add it to every file, only the top segment of a route.
+- To disable PPR for children segments, you can set experimental_ppr to false in the child segment.
